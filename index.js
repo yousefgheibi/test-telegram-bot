@@ -44,7 +44,7 @@ function sendMainMenu(chatId) {
     reply_markup: {
       keyboard: [
         ["🟢 ثبت خرید", "🔴 ثبت فروش"],
-        ["📈 خلاصه وضعیت", "📤 خروجی CSV"],
+        ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
       ],
       resize_keyboard: true,
     },
@@ -71,7 +71,7 @@ bot.on("message", (msg) => {
     case "📈 خلاصه وضعیت":
       showSummary(chatId);
       break;
-    case "📤 خروجی CSV":
+    case "📤 خروجی فایل":
       exportExcel(chatId);
       break;
     default:
@@ -306,11 +306,21 @@ function exportExcel(chatId) {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }),
-    توضیحات: t.desc,
     تاریخ: t.date,
+    توضیحات: t.desc,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
+
+  worksheet["!cols"] = [
+    { wch: 12 }, // نوع تراکنش
+    { wch: 25 }, // نام خریدار / فروشنده
+    { wch: 20 }, // قیمت مثقال (تومان)
+    { wch: 20 }, // مبلغ کل (تومان)
+    { wch: 15 }, // وزن (گرم)
+    { wch: 25 }, // تاریخ
+    { wch: 30 }, // توضیحات
+  ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "تراکنش‌ها");
 
@@ -318,7 +328,5 @@ function exportExcel(chatId) {
 
   XLSX.writeFile(workbook, filePath);
 
-  bot.sendDocument(chatId, filePath, {
-    caption: "📊 فایل Excel تراکنش‌ها",
-  });
+  bot.sendDocument(chatId, filePath);
 }
