@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
-import { createCanvas } from "canvas";
+import { createCanvas, registerFont } from "canvas";
 import { Parser } from "json2csv";
 import dotenv from "dotenv";
 
@@ -166,6 +166,7 @@ function saveTransaction(chatId, record) {
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
   const height = 450;
+  registerFont('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap', { family: 'Vazirmatn' });
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
@@ -173,7 +174,7 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.fillRect(0, 0, width, height);
 
   ctx.fillStyle = "#333";
-  ctx.font = "bold 28px sans-serif";
+  ctx.font = "bold 28px Vazirmatn";
   ctx.fillText("🧾 فاکتور طلا", 200, 50);
 
   ctx.font = "20px sans-serif";
