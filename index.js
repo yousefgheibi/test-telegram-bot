@@ -1,12 +1,14 @@
+// index.js
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
 import { createCanvas } from "canvas";
 import { Parser } from "json2csv";
 import dotenv from "dotenv";
-dotenv.config();
+
+dotenv.config({ debug: false });
 
 const token = process.env.TELEGRAM_TOKEN;
-const bot = new TelegramBot(token, { polling: false });
+const bot = new TelegramBot(token, { polling: true });
 
 const dataDir = "./data";
 const exportDir = "./exports";
@@ -18,6 +20,7 @@ if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]", "utf8");
 const ADMIN_CHAT_ID = 507528648;
 const userState = {};
 
+// شروع ربات
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || "کاربر";
@@ -25,15 +28,20 @@ bot.onText(/\/start/, (msg) => {
   sendMainMenu(chatId);
 });
 
+// ثبت کاربر
 function registerUser(chatId, name) {
   const users = JSON.parse(fs.readFileSync(usersFile));
   if (!users.find((u) => u.chatId === chatId)) {
     users.push({ chatId, name, date: new Date().toLocaleString("fa-IR") });
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-    bot.sendMessage(ADMIN_CHAT_ID, `📢 کاربر جدید:\n👤 ${name}\n🆔 ${chatId}`);
+    bot.sendMessage(
+      ADMIN_CHAT_ID,
+      `📢 کاربر جدید ثبت شد:\n👤 ${name}\n🆔 ${chatId}`
+    );
   }
 }
 
+// منوی اصلی
 function sendMainMenu(chatId) {
   bot.sendMessage(chatId, "📊 لطفاً یکی از گزینه‌ها را انتخاب کنید:", {
     reply_markup: {
@@ -46,6 +54,7 @@ function sendMainMenu(chatId) {
   });
 }
 
+// دریافت پیام‌ها
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -74,14 +83,13 @@ bot.on("message", (msg) => {
   }
 });
 
+// شروع تراکنش
 function startTransaction(chatId, type) {
   userState[chatId] = { type, step: "priceMithqal" };
-  bot.sendMessage(
-    chatId,
-    "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:"
-  );
+  bot.sendMessage(chatId, "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:");
 }
 
+// دریافت اطلاعات کاربر
 function handleInput(chatId, text) {
   const state = userState[chatId];
 
@@ -91,10 +99,7 @@ function handleInput(chatId, text) {
         return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
       state.priceMithqal = Number(text);
       state.step = "amount";
-      bot.sendMessage(
-        chatId,
-        "💵 مبلغ کل خرید یا فروش (به تومان) را وارد کنید:"
-      );
+      bot.sendMessage(chatId, "💵 مبلغ کل خرید یا فروش (به تومان) را وارد کنید:");
       break;
 
     case "amount":
@@ -108,13 +113,14 @@ function handleInput(chatId, text) {
         type: state.type,
         priceMithqal: state.priceMithqal,
         amount: state.amount,
-        weight: gramWeight,
+        weight: parseFloat(gramWeight.toFixed(3)),
       });
       delete userState[chatId];
       break;
   }
 }
 
+// ذخیره تراکنش و ارسال فاکتور تصویری
 function saveTransaction(chatId, record) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   let transactions = [];
@@ -128,7 +134,6 @@ function saveTransaction(chatId, record) {
   transactions.push(entry);
   fs.writeFileSync(userFile, JSON.stringify(transactions, null, 2));
 
-  // ساخت عکس فاکتور
   const filePath = `${exportDir}/invoice_${chatId}_${Date.now()}.png`;
   createInvoiceImage(entry, filePath, () => {
     bot.sendPhoto(chatId, filePath, {
@@ -137,6 +142,7 @@ function saveTransaction(chatId, record) {
   });
 }
 
+// ساخت تصویر فاکتور
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
   const height = 400;
@@ -167,13 +173,13 @@ function createInvoiceImage(entry, outputPath, callback) {
     40,
     230
   );
-  ctx.fillText(`⚖️ وزن تقریبی طلا: ${entry.weight.toFixed(3)} گرم`, 40, 270);
+  ctx.fillText(`⚖️ وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, 40, 270);
 
-  const buffer = canvas.toBuffer("image/png");
-  fs.writeFileSync(outputPath, buffer);
+  fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
   callback();
 }
 
+// خلاصه وضعیت
 function showSummary(chatId) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   if (!fs.existsSync(userFile))
@@ -203,6 +209,7 @@ function showSummary(chatId) {
   bot.sendMessage(chatId, msg);
 }
 
+// خروجی CSV
 function exportCSV(chatId) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   if (!fs.existsSync(userFile))
