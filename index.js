@@ -1,5 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import { createCanvas, registerFont } from "canvas";
 import { Parser } from "json2csv";
 import dotenv from "dotenv";
@@ -201,7 +203,10 @@ function createInvoiceImage(entry, outputPath, callback) {
     startY
   );
   startY += lineHeight;
-  ctx.fillText(`وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, startX, startY);
+  ctx.fillText(`وزن تقریبی: ${entry.weight.toLocaleString("fa-IR", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    })} گرم`, startX, startY);
   startY += lineHeight;
   ctx.fillText(`توضیحات: ${entry.desc}`, startX, startY);
 
@@ -276,6 +281,6 @@ function exportCSV(chatId) {
   fs.writeFileSync(filePath, csv, "utf8");
 
   bot.sendDocument(chatId, filePath, {
-    caption: "📄 فایل CSV تراکنش‌ها (با اعداد فارسی و مرتب)",
+    caption: "📄 فایل CSV تراکنش‌ها",
   });
 }
