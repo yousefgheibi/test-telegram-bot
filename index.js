@@ -73,7 +73,7 @@ bot.on("message", (msg) => {
       showSummary(chatId);
       break;
     case "📤 خروجی CSV":
-      exportCSV(chatId);
+      exportPDF(chatId);
       break;
     default:
       sendMainMenu(chatId);
@@ -203,10 +203,14 @@ function createInvoiceImage(entry, outputPath, callback) {
     startY
   );
   startY += lineHeight;
-  ctx.fillText(`وزن تقریبی: ${entry.weight.toLocaleString("fa-IR", {
+  ctx.fillText(
+    `وزن تقریبی: ${entry.weight.toLocaleString("fa-IR", {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
-    })} گرم`, startX, startY);
+    })} گرم`,
+    startX,
+    startY
+  );
   startY += lineHeight;
   ctx.fillText(`توضیحات: ${entry.desc}`, startX, startY);
 
@@ -282,5 +286,73 @@ function exportCSV(chatId) {
 
   bot.sendDocument(chatId, filePath, {
     caption: "📄 فایل CSV تراکنش‌ها",
+  });
+}
+
+async function exportPDF(chatId) {
+  const userFile = `${dataDir}/data_${chatId}.json`;
+  if (!fs.existsSync(userFile))
+    return bot.sendMessage(chatId, "❗ هنوز تراکنشی ثبت نکرده‌اید.");
+
+  const transactions = JSON.parse(fs.readFileSync(userFile));
+  if (!transactions.length)
+    return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
+
+  const fontBytes = fs.readFileSync(
+    path.join("./assets/font", "vazirmatn.ttf")
+  );
+
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+  const vazirFont = await pdfDoc.embedFont(fontBytes);
+
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const { width, height } = page.getSize();
+  const fontSize = 12;
+  let y = height - 60;
+
+  page.drawText("🧾 گزارش تراکنش‌های طلا", {
+    x: 200,
+    y,
+    size: 20,
+    font: vazirFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  y -= 40;
+
+  for (const t of transactions) {
+    const typeText = t.type === "buy" ? "خرید" : "فروش";
+    const line = `
+نوع تراکنش: ${typeText}
+نام خریدار / فروشنده: ${t.name}
+قیمت مثقال: ${t.priceMithqal.toLocaleString("fa-IR")} تومان
+مبلغ کل: ${t.amount.toLocaleString("fa-IR")} تومان
+وزن: ${t.weight.toLocaleString("fa-IR", { minimumFractionDigits: 3 })} گرم
+توضیحات: ${t.desc || "-"}
+تاریخ: ${t.date}
+-------------------------------
+    `.trim();
+
+    page.drawText(line, {
+      x: 60,
+      y: y,
+      size: fontSize,
+      font: vazirFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    y -= 120;
+
+    if (y < 100) {
+      y = height - 80;
+      pdfDoc.addPage();
+    }
+  }
+
+  const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.pdf`;
+  const pdfBytes = await pdfDoc.save();
+  fs.writeFileSync(filePath, pdfBytes);
+
+  bot.sendDocument(chatId, filePath, {
+    caption: "📘 فایل PDF تراکنش‌ها",
   });
 }
