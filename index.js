@@ -169,31 +169,29 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.strokeRect(10, 10, width - 20, height - 20);
 
   ctx.fillStyle = "#d4af37";
-  ctx.font = "bold 28px Vazirmatn";
-  ctx.fillText("🧾 فاکتور طلا", 200, 50);
+  ctx.font = "bold 32px Vazirmatn";
+  ctx.fillText("فاکتور طلا", 200, 50);
   ctx.textAlign = "right";
+
+  const startX = width - 40;
+  let startY = 110;
+  const lineHeight = 40;
 
   ctx.fillStyle = "#333";
   ctx.font = "20px Vazirmatn";
-  ctx.fillText(`تاریخ: ${entry.date}`, 40, 100);
-  ctx.fillText(
-    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
-    40,
-    140
-  );
-  ctx.fillText(`نام: ${entry.name}`, 40, 180);
-  ctx.fillText(
-    `قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
-    40,
-    220
-  );
-  ctx.fillText(
-    `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
-    40,
-    260
-  );
-  ctx.fillText(`وزن: ${entry.weight.toFixed(3)} گرم`, 40, 300);
-  ctx.fillText(`توضیحات: ${entry.desc}`, 40, 340);
+  ctx.fillText(`تاریخ: ${entry.date}`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`نام: ${entry.name}`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, startX, startY);
+  startY += lineHeight;
+  ctx.fillText(`توضیحات: ${entry.desc}`, startX, startY);
 
   fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
   callback();
