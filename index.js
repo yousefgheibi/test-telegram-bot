@@ -5,7 +5,7 @@ import { Parser } from "json2csv";
 import dotenv from "dotenv";
 dotenv.config({ debug: false });
 
-registerFont('./assets/font/vazirmatn.ttf', { family: 'Vazirmatn' });
+registerFont("./assets/font/vazirmatn.ttf", { family: "Vazirmatn" });
 const token = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
@@ -161,21 +161,39 @@ function createInvoiceImage(entry, outputPath, callback) {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#f5f5f5";
+  ctx.fillStyle = "#fef6e4";
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = "#333";
+  ctx.strokeStyle = "#d4af37";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(10, 10, width - 20, height - 20);
+
+  ctx.fillStyle = "#d4af37";
   ctx.font = "bold 28px Vazirmatn";
   ctx.fillText("🧾 فاکتور طلا", 200, 50);
+  ctx.textAlign = "right";
 
+  ctx.fillStyle = "#333";
   ctx.font = "20px Vazirmatn";
-  ctx.fillText(`📅 تاریخ: ${entry.date}`, 40, 100);
-  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, 40, 140);
-  ctx.fillText(`👤 نام: ${entry.name}`, 40, 180);
-  ctx.fillText(`💰 قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, 40, 220);
-  ctx.fillText(`💵 مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, 40, 260);
-  ctx.fillText(`⚖️ وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, 40, 300);
-  ctx.fillText(`📝 توضیحات: ${entry.desc}`, 40, 340);
+  ctx.fillText(`تاریخ: ${entry.date}`, 40, 100);
+  ctx.fillText(
+    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
+    40,
+    140
+  );
+  ctx.fillText(`نام: ${entry.name}`, 40, 180);
+  ctx.fillText(
+    `قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
+    40,
+    220
+  );
+  ctx.fillText(
+    `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
+    40,
+    260
+  );
+  ctx.fillText(`وزن: ${entry.weight.toFixed(3)} گرم`, 40, 300);
+  ctx.fillText(`توضیحات: ${entry.desc}`, 40, 340);
 
   fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
   callback();
