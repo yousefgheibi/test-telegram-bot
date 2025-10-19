@@ -1,4 +1,3 @@
-// index.js
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
 import { createCanvas } from "canvas";
@@ -85,35 +84,56 @@ bot.on("message", (msg) => {
 
 // شروع تراکنش
 function startTransaction(chatId, type) {
-  userState[chatId] = { type, step: "priceMithqal" };
-  bot.sendMessage(chatId, "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:");
+  userState[chatId] = { type, step: "name" };
+  const label = type === "buy" ? "خریدار" : "فروشنده";
+  bot.sendMessage(chatId, `👤 لطفاً نام ${label} را وارد کنید:`);
 }
 
-// دریافت اطلاعات کاربر
+// دریافت اطلاعات کاربر مرحله به مرحله
 function handleInput(chatId, text) {
   const state = userState[chatId];
 
   switch (state.step) {
+    case "name":
+      state.name = text;
+      state.step = "priceMithqal";
+      bot.sendMessage(
+        chatId,
+        "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:"
+      );
+      break;
+
     case "priceMithqal":
       if (isNaN(text))
         return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
       state.priceMithqal = Number(text);
       state.step = "amount";
-      bot.sendMessage(chatId, "💵 مبلغ کل خرید یا فروش (به تومان) را وارد کنید:");
+      bot.sendMessage(
+        chatId,
+        "💵 مبلغ کل خرید یا فروش (به تومان) را وارد کنید:"
+      );
       break;
 
     case "amount":
       if (isNaN(text))
         return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
       state.amount = Number(text);
+      state.weight = parseFloat(
+        ((state.amount / state.priceMithqal) * 4.3318).toFixed(3)
+      );
+      state.step = "desc";
+      bot.sendMessage(chatId, "📝 توضیحات (اختیاری) را وارد کنید:");
+      break;
 
-      const gramWeight = (state.amount / state.priceMithqal) * 4.3318;
-
+    case "desc":
+      state.desc = text || "-";
       saveTransaction(chatId, {
         type: state.type,
+        name: state.name,
         priceMithqal: state.priceMithqal,
         amount: state.amount,
-        weight: parseFloat(gramWeight.toFixed(3)),
+        weight: state.weight,
+        desc: state.desc,
       });
       delete userState[chatId];
       break;
@@ -145,7 +165,7 @@ function saveTransaction(chatId, record) {
 // ساخت تصویر فاکتور
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
-  const height = 400;
+  const height = 450;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
@@ -154,26 +174,28 @@ function createInvoiceImage(entry, outputPath, callback) {
 
   ctx.fillStyle = "#333";
   ctx.font = "bold 28px sans-serif";
-  ctx.fillText("🧾 فاکتور طلا", 230, 60);
+  ctx.fillText("🧾 فاکتور طلا", 200, 50);
 
   ctx.font = "20px sans-serif";
-  ctx.fillText(`📅 تاریخ: ${entry.date}`, 40, 110);
+  ctx.fillText(`📅 تاریخ: ${entry.date}`, 40, 100);
   ctx.fillText(
     `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
     40,
-    150
+    140
   );
+  ctx.fillText(`👤 نام: ${entry.name}`, 40, 180);
   ctx.fillText(
     `💰 قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
     40,
-    190
+    220
   );
   ctx.fillText(
     `💵 مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
     40,
-    230
+    260
   );
-  ctx.fillText(`⚖️ وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, 40, 270);
+  ctx.fillText(`⚖️ وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, 40, 300);
+  ctx.fillText(`📝 توضیحات: ${entry.desc}`, 40, 340);
 
   fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
   callback();
@@ -220,13 +242,16 @@ function exportCSV(chatId) {
     return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
 
   const csv = new Parser({
-    fields: ["type", "priceMithqal", "amount", "weight", "date"],
+    fields: ["type", "name", "priceMithqal", "amount", "weight", "desc", "date"],
   }).parse(
     transactions.map((t) => ({
       ...t,
+      name: t.name,
       priceMithqal: `${t.priceMithqal.toLocaleString("fa-IR")} تومان`,
       amount: `${t.amount.toLocaleString("fa-IR")} تومان`,
       weight: `${t.weight.toFixed(3)} گرم`,
+      desc: t.desc,
+      date: t.date,
     }))
   );
 
