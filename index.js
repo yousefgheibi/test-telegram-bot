@@ -170,7 +170,7 @@ function createInvoiceImage(entry, outputPath, callback) {
 
   ctx.fillStyle = "#d4af37";
   ctx.font = "bold 32px Vazirmatn";
-  ctx.fillText("فاکتور طلا", 200, 50);
+  ctx.fillText("گالـری یامـــور", 200, 50);
   ctx.textAlign = "right";
 
   const startX = width - 40;
@@ -181,13 +181,25 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.font = "20px Vazirmatn";
   ctx.fillText(`تاریخ: ${entry.date}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, startX, startY);
+  ctx.fillText(
+    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
+    startX,
+    startY
+  );
   startY += lineHeight;
   ctx.fillText(`نام: ${entry.name}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(`قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, startX, startY);
+  ctx.fillText(
+    `قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
+    startX,
+    startY
+  );
   startY += lineHeight;
-  ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+  ctx.fillText(
+    `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
+    startX,
+    startY
+  );
   startY += lineHeight;
   ctx.fillText(`وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, startX, startY);
   startY += lineHeight;
@@ -212,14 +224,12 @@ function showSummary(chatId) {
   const totalSell = transactions
     .filter((t) => t.type === "sell")
     .reduce((sum, t) => sum + t.amount, 0);
-  const profit = totalSell - totalBuy;
 
   const msg = `
 📊 خلاصه وضعیت:
 -------------------------
 🟢 مجموع خرید: ${totalBuy.toLocaleString("fa-IR")} تومان
 🔴 مجموع فروش: ${totalSell.toLocaleString("fa-IR")} تومان
-💎 سود / زیان خالص: ${profit.toLocaleString("fa-IR")} تومان
 -------------------------
 📅 تعداد تراکنش‌ها: ${transactions.length}
 `;
@@ -235,32 +245,37 @@ function exportCSV(chatId) {
   if (!transactions.length)
     return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
 
-  const csv = new Parser({
+  const formattedData = transactions.map((t) => ({
+    "نوع تراکنش": t.type === "buy" ? "خرید" : "فروش",
+    "نام خریدار / فروشنده": t.name,
+    "قیمت مثقال (تومان)": t.priceMithqal.toLocaleString("fa-IR"),
+    "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
+    "وزن (گرم)": t.weight.toLocaleString("fa-IR", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    }),
+    توضیحات: t.desc,
+    تاریخ: t.date,
+  }));
+
+  const parser = new Parser({
     fields: [
-      "type",
-      "name",
-      "priceMithqal",
-      "amount",
-      "weight",
-      "desc",
-      "date",
+      "نوع تراکنش",
+      "نام خریدار / فروشنده",
+      "قیمت مثقال (تومان)",
+      "مبلغ کل (تومان)",
+      "وزن (گرم)",
+      "توضیحات",
+      "تاریخ",
     ],
-  }).parse(
-    transactions.map((t) => ({
-      ...t,
-      name: t.name,
-      priceMithqal: `${t.priceMithqal.toLocaleString("fa-IR")} تومان`,
-      amount: `${t.amount.toLocaleString("fa-IR")} تومان`,
-      weight: `${t.weight.toFixed(3)} گرم`,
-      desc: t.desc,
-      date: t.date,
-    }))
-  );
+  });
+
+  const csv = parser.parse(formattedData);
 
   const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.csv`;
   fs.writeFileSync(filePath, csv, "utf8");
 
   bot.sendDocument(chatId, filePath, {
-    caption: "📄 فایل CSV تراکنش‌ها",
+    caption: "📄 فایل CSV تراکنش‌ها (با اعداد فارسی و مرتب)",
   });
 }
