@@ -3,9 +3,9 @@ import fs from "fs";
 import { createCanvas, registerFont } from "canvas";
 import { Parser } from "json2csv";
 import dotenv from "dotenv";
-
 dotenv.config({ debug: false });
 
+registerFont('./assets/font/vazirmatn.ttf', { family: 'Vazirmatn' });
 const token = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
@@ -19,7 +19,6 @@ if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]", "utf8");
 const ADMIN_CHAT_ID = 507528648;
 const userState = {};
 
-// شروع ربات
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || "کاربر";
@@ -27,7 +26,6 @@ bot.onText(/\/start/, (msg) => {
   sendMainMenu(chatId);
 });
 
-// ثبت کاربر
 function registerUser(chatId, name) {
   const users = JSON.parse(fs.readFileSync(usersFile));
   if (!users.find((u) => u.chatId === chatId)) {
@@ -40,7 +38,6 @@ function registerUser(chatId, name) {
   }
 }
 
-// منوی اصلی
 function sendMainMenu(chatId) {
   bot.sendMessage(chatId, "📊 لطفاً یکی از گزینه‌ها را انتخاب کنید:", {
     reply_markup: {
@@ -53,7 +50,6 @@ function sendMainMenu(chatId) {
   });
 }
 
-// دریافت پیام‌ها
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -82,14 +78,12 @@ bot.on("message", (msg) => {
   }
 });
 
-// شروع تراکنش
 function startTransaction(chatId, type) {
   userState[chatId] = { type, step: "name" };
   const label = type === "buy" ? "خریدار" : "فروشنده";
   bot.sendMessage(chatId, `👤 لطفاً نام ${label} را وارد کنید:`);
 }
 
-// دریافت اطلاعات کاربر مرحله به مرحله
 function handleInput(chatId, text) {
   const state = userState[chatId];
 
@@ -140,7 +134,6 @@ function handleInput(chatId, text) {
   }
 }
 
-// ذخیره تراکنش و ارسال فاکتور تصویری
 function saveTransaction(chatId, record) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   let transactions = [];
@@ -162,11 +155,9 @@ function saveTransaction(chatId, record) {
   });
 }
 
-// ساخت تصویر فاکتور
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
   const height = 450;
-  registerFont('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap', { family: 'Vazirmatn' });
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
@@ -177,24 +168,12 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.font = "bold 28px Vazirmatn";
   ctx.fillText("🧾 فاکتور طلا", 200, 50);
 
-  ctx.font = "20px sans-serif";
+  ctx.font = "20px Vazirmatn";
   ctx.fillText(`📅 تاریخ: ${entry.date}`, 40, 100);
-  ctx.fillText(
-    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
-    40,
-    140
-  );
+  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, 40, 140);
   ctx.fillText(`👤 نام: ${entry.name}`, 40, 180);
-  ctx.fillText(
-    `💰 قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
-    40,
-    220
-  );
-  ctx.fillText(
-    `💵 مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
-    40,
-    260
-  );
+  ctx.fillText(`💰 قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, 40, 220);
+  ctx.fillText(`💵 مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, 40, 260);
   ctx.fillText(`⚖️ وزن تقریبی: ${entry.weight.toFixed(3)} گرم`, 40, 300);
   ctx.fillText(`📝 توضیحات: ${entry.desc}`, 40, 340);
 
@@ -202,7 +181,6 @@ function createInvoiceImage(entry, outputPath, callback) {
   callback();
 }
 
-// خلاصه وضعیت
 function showSummary(chatId) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   if (!fs.existsSync(userFile))
@@ -232,7 +210,6 @@ function showSummary(chatId) {
   bot.sendMessage(chatId, msg);
 }
 
-// خروجی CSV
 function exportCSV(chatId) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   if (!fs.existsSync(userFile))
@@ -243,7 +220,15 @@ function exportCSV(chatId) {
     return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
 
   const csv = new Parser({
-    fields: ["type", "name", "priceMithqal", "amount", "weight", "desc", "date"],
+    fields: [
+      "type",
+      "name",
+      "priceMithqal",
+      "amount",
+      "weight",
+      "desc",
+      "date",
+    ],
   }).parse(
     transactions.map((t) => ({
       ...t,
