@@ -1,7 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import fontkit from "@pdf-lib/fontkit";
+import XLSX from "xlsx";
 import { createCanvas, registerFont } from "canvas";
 import { Parser } from "json2csv";
 import dotenv from "dotenv";
@@ -73,7 +72,7 @@ bot.on("message", (msg) => {
       showSummary(chatId);
       break;
     case "📤 خروجی CSV":
-      exportCSV(chatId);
+      exportExcel(chatId);
       break;
     default:
       sendMainMenu(chatId);
@@ -281,7 +280,7 @@ function exportCSV(chatId) {
 
   const csv = parser.parse(formattedData);
 
-  const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.pdf`;
+  const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.csv`;
   fs.writeFileSync(filePath, csv, "utf8");
 
   bot.sendDocument(chatId, filePath, {
@@ -289,70 +288,37 @@ function exportCSV(chatId) {
   });
 }
 
-// async function exportPDF(chatId) {
-//   const userFile = `${dataDir}/data_${chatId}.json`;
-//   if (!fs.existsSync(userFile))
-//     return bot.sendMessage(chatId, "❗ هنوز تراکنشی ثبت نکرده‌اید.");
+function exportExcel(chatId) {
+  const userFile = `${dataDir}/data_${chatId}.json`;
+  if (!fs.existsSync(userFile))
+    return bot.sendMessage(chatId, "❗ هنوز تراکنشی ثبت نکرده‌اید.");
 
-//   const transactions = JSON.parse(fs.readFileSync(userFile));
-//   if (!transactions.length)
-//     return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
+  const transactions = JSON.parse(fs.readFileSync(userFile));
+  if (!transactions.length)
+    return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
 
-//   const fontBytes = fs.readFileSync(
-//     path.join("./assets/font", "vazirmatn.ttf")
-//   );
+  const formattedData = transactions.map((t) => ({
+    "نوع تراکنش": t.type === "buy" ? "خرید" : "فروش",
+    "نام خریدار / فروشنده": t.name,
+    "قیمت مثقال (تومان)": t.priceMithqal.toLocaleString("fa-IR"),
+    "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
+    "وزن (گرم)": t.weight.toLocaleString("fa-IR", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    }),
+    توضیحات: t.desc,
+    تاریخ: t.date,
+  }));
 
-//   const pdfDoc = await PDFDocument.create();
-//   pdfDoc.registerFontkit(fontkit);
-//   const vazirFont = await pdfDoc.embedFont(fontBytes);
+  const worksheet = XLSX.utils.json_to_sheet(formattedData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "تراکنش‌ها");
 
-//   const page = pdfDoc.addPage([595, 842]); // A4
-//   const { width, height } = page.getSize();
-//   const fontSize = 12;
-//   let y = height - 60;
+  const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.xlsx`;
 
-//   page.drawText("🧾 گزارش تراکنش‌های طلا", {
-//     x: 200,
-//     y,
-//     size: 20,
-//     font: vazirFont,
-//     color: rgb(0.2, 0.2, 0.2),
-//   });
-//   y -= 40;
+  XLSX.writeFile(workbook, filePath);
 
-//   for (const t of transactions) {
-//     const typeText = t.type === "buy" ? "خرید" : "فروش";
-//     const line = `
-// نوع تراکنش: ${typeText}
-// نام خریدار / فروشنده: ${t.name}
-// قیمت مثقال: ${t.priceMithqal.toLocaleString("fa-IR")} تومان
-// مبلغ کل: ${t.amount.toLocaleString("fa-IR")} تومان
-// وزن: ${t.weight.toLocaleString("fa-IR", { minimumFractionDigits: 3 })} گرم
-// توضیحات: ${t.desc || "-"}
-// تاریخ: ${t.date}
-// -------------------------------
-//     `.trim();
-
-//     page.drawText(line, {
-//       x: 60,
-//       y: y,
-//       size: fontSize,
-//       font: vazirFont,
-//       color: rgb(0.1, 0.1, 0.1),
-//     });
-//     y -= 120;
-
-//     if (y < 100) {
-//       y = height - 80;
-//       pdfDoc.addPage();
-//     }
-//   }
-
-//   const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.pdf`;
-//   const pdfBytes = await pdfDoc.save();
-//   fs.writeFileSync(filePath, pdfBytes);
-
-//   bot.sendDocument(chatId, filePath, {
-//     caption: "📘 فایل PDF تراکنش‌ها",
-//   });
-// }
+  bot.sendDocument(chatId, filePath, {
+    caption: "📊 فایل Excel تراکنش‌ها",
+  });
+}
