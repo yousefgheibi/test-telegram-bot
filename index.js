@@ -354,6 +354,10 @@ function exportExcel(chatId) {
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
+   
+  const colsWidth = Object.keys(formattedData[0]).map(() => ({ wch: 25 }));
+  worksheet["!cols"] = colsWidth;
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "تراکنش‌ها");
 
