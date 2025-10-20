@@ -105,7 +105,10 @@ function handleInput(chatId, text) {
     // --- انتخاب نوع کالا ---
     case "itemType":
       if (!["طلا", "سکه", "ارز"].includes(text))
-        return bot.sendMessage(chatId, "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید.");
+        return bot.sendMessage(
+          chatId,
+          "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید."
+        );
 
       state.itemType = text;
 
@@ -169,13 +172,19 @@ function handleInput(chatId, text) {
     case "coinType":
       state.coinType = text;
       state.step = "basePrice";
-      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:");
+      bot.sendMessage(
+        chatId,
+        "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:"
+      );
       break;
 
     case "currencyType":
       state.currencyType = text;
       state.step = "basePrice";
-      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:");
+      bot.sendMessage(
+        chatId,
+        "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:"
+      );
       break;
 
     case "basePrice":
@@ -224,15 +233,17 @@ function saveTransaction(chatId, record) {
     });
   });
 
-  bot.sendMessage(chatId, {
-    reply_markup: {
-      keyboard: [
-        ["🟢 ثبت خرید", "🔴 ثبت فروش"],
-        ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
-      ],
-      resize_keyboard: true,
-    },
-  });
+  setTimeout(() => {
+    bot.sendMessage(chatId, "📊 لطفاً یکی از گزینه‌ها را انتخاب کنید:", {
+      reply_markup: {
+        keyboard: [
+          ["🟢 ثبت خرید", "🔴 ثبت فروش"],
+          ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
+        ],
+        resize_keyboard: true,
+      },
+    });
+  }, 1000);
 }
 
 function createInvoiceImage(entry, outputPath, callback) {
@@ -388,7 +399,7 @@ function exportExcel(chatId) {
     "قیمت پایه / مثقال": (t.priceMithqal || t.basePrice)?.toLocaleString(
       "fa-IR"
     ),
-    "تعداد / مبلغ کل": (t.quantity || t.amount)?.toLocaleString("fa-IR"),
+    "تعداد / وزن": (t.quantity || t.weight)?.toLocaleString("fa-IR"),
     "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
     توضیحات: t.desc,
     تاریخ: t.date,
