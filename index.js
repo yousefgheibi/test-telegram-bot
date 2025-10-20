@@ -67,10 +67,12 @@ bot.on("message", (msg) => {
 
   switch (text) {
     case "🟢 ثبت خرید":
-      startTransaction(chatId, "buy");
+      userState[chatId] = { type: "buy", step: "name" };
+      bot.sendMessage(chatId, "👤 لطفاً نام خریدار را وارد کنید:");
       break;
     case "🔴 ثبت فروش":
-      startTransaction(chatId, "sell");
+      userState[chatId] = { type: "sell", step: "name" };
+      bot.sendMessage(chatId, "👤 لطفاً نام فروشنده را وارد کنید:");
       break;
     case "📈 خلاصه وضعیت":
       showSummary(chatId);
@@ -82,17 +84,6 @@ bot.on("message", (msg) => {
       sendMainMenu(chatId);
   }
 });
-
-function startTransaction(chatId, type) {
-  userState[chatId] = { type, step: "itemType" };
-  bot.sendMessage(chatId, "🏷 لطفاً نوع کالا را انتخاب کنید:", {
-    reply_markup: {
-      keyboard: [["طلا", "سکه", "ارز"]],
-      resize_keyboard: true,
-      one_time_keyboard: true,
-    },
-  });
-}
 
 function handleInput(chatId, text) {
   const state = userState[chatId];
@@ -114,7 +105,10 @@ function handleInput(chatId, text) {
     // --- انتخاب نوع کالا ---
     case "itemType":
       if (!["طلا", "سکه", "ارز"].includes(text))
-        return bot.sendMessage(chatId, "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید.");
+        return bot.sendMessage(
+          chatId,
+          "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید."
+        );
 
       state.itemType = text;
 
@@ -124,12 +118,12 @@ function handleInput(chatId, text) {
           chatId,
           "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:"
         );
-      } else if (text === "سکه") {
+      } else {
         state.step = "basePrice";
-        bot.sendMessage(chatId, "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:");
-      } else if (text === "ارز") {
-        state.step = "basePrice";
-        bot.sendMessage(chatId, "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:");
+        bot.sendMessage(
+          chatId,
+          `💰 لطفاً قیمت پایه ${text} (به تومان) را وارد کنید:`
+        );
       }
       break;
 
@@ -239,19 +233,15 @@ function saveTransaction(chatId, record) {
     });
   });
 
-  bot.sendMessage(
-    chatId,
-    "📋 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
-    {
-      reply_markup: {
-        keyboard: [
-          ["🟢 ثبت خرید", "🔴 ثبت فروش"],
-          ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
-        ],
-        resize_keyboard: true,
-      },
-    }
-  );
+  bot.sendMessage(chatId, {
+    reply_markup: {
+      keyboard: [
+        ["🟢 ثبت خرید", "🔴 ثبت فروش"],
+        ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
+      ],
+      resize_keyboard: true,
+    },
+  });
 }
 
 function createInvoiceImage(entry, outputPath, callback) {
