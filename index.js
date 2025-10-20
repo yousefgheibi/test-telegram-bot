@@ -80,15 +80,82 @@ bot.on("message", (msg) => {
 });
 
 function startTransaction(chatId, type) {
-  userState[chatId] = { type, step: "name" };
-  const label = type === "buy" ? "خریدار" : "فروشنده";
-  bot.sendMessage(chatId, `👤 لطفاً نام ${label} را وارد کنید:`);
+  userState[chatId] = { type, step: "itemType" };
+  bot.sendMessage(chatId, "🏷 لطفاً نوع کالا را انتخاب کنید:", {
+    reply_markup: {
+      keyboard: [["طلا", "سکه", "ارز"]],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
 }
 
 function handleInput(chatId, text) {
   const state = userState[chatId];
 
   switch (state.step) {
+    // --- مرحله انتخاب نوع کالا ---
+    case "itemType":
+      if (!["طلا", "سکه", "ارز"].includes(text))
+        return bot.sendMessage(chatId, "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید.");
+
+      state.itemType = text;
+      if (text === "طلا") {
+        state.step = "name";
+        const label = state.type === "buy" ? "خریدار" : "فروشنده";
+        bot.sendMessage(chatId, `👤 لطفاً نام ${label} را وارد کنید:`);
+      } else if (text === "سکه") {
+        state.step = "coinType";
+        bot.sendMessage(chatId, "🪙 لطفاً نوع سکه را انتخاب کنید:", {
+          reply_markup: {
+            keyboard: [["ربع", "نیم", "تمام"]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          },
+        });
+      } else if (text === "ارز") {
+        state.step = "currencyType";
+        bot.sendMessage(chatId, "💵 لطفاً نوع ارز را انتخاب کنید:", {
+          reply_markup: {
+            keyboard: [["دلار", "یورو", "لیر"]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          },
+        });
+      }
+      break;
+
+    // --- سکه ---
+    case "coinType":
+      state.coinType = text;
+      state.step = "basePrice";
+      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:");
+      break;
+
+    case "currencyType":
+      state.currencyType = text;
+      state.step = "basePrice";
+      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:");
+      break;
+
+    case "basePrice":
+      if (isNaN(text))
+        return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
+      state.basePrice = Number(text);
+      state.step = "quantity";
+      bot.sendMessage(chatId, "🔢 لطفاً تعداد را وارد کنید:");
+      break;
+
+    case "quantity":
+      if (isNaN(text))
+        return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
+      state.quantity = Number(text);
+      state.amount = state.basePrice * state.quantity;
+      state.step = "desc";
+      bot.sendMessage(chatId, "📝 توضیحات (اختیاری) را وارد کنید:");
+      break;
+
+    // --- طلا ---
     case "name":
       state.name = text;
       state.step = "priceMithqal";
@@ -120,16 +187,10 @@ function handleInput(chatId, text) {
       bot.sendMessage(chatId, "📝 توضیحات (اختیاری) را وارد کنید:");
       break;
 
+    // --- ذخیره ---
     case "desc":
       state.desc = text || "-";
-      saveTransaction(chatId, {
-        type: state.type,
-        name: state.name,
-        priceMithqal: state.priceMithqal,
-        amount: state.amount,
-        weight: state.weight,
-        desc: state.desc,
-      });
+      saveTransaction(chatId, state);
       delete userState[chatId];
       break;
   }
@@ -158,7 +219,7 @@ function saveTransaction(chatId, record) {
 
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
-  const height = 450;
+  const height = 500;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
@@ -182,34 +243,37 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.font = "20px Vazirmatn";
   ctx.fillText(`تاریخ: ${entry.date}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(
-    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
-    startX,
-    startY
-  );
+  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(`نام: ${entry.name}`, startX, startY);
+  ctx.fillText(`نوع کالا: ${entry.itemType}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(
-    `قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
-    startX,
-    startY
-  );
-  startY += lineHeight;
-  ctx.fillText(
-    `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
-    startX,
-    startY
-  );
-  startY += lineHeight;
-  ctx.fillText(
-    `وزن تقریبی: ${entry.weight.toLocaleString("fa-IR", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    })} گرم`,
-    startX,
-    startY
-  );
+
+  if (entry.itemType === "طلا") {
+    ctx.fillText(`نام: ${entry.name}`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`وزن: ${entry.weight} گرم`, startX, startY);
+  } else if (entry.itemType === "سکه") {
+    ctx.fillText(`نوع سکه: ${entry.coinType}`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`تعداد: ${entry.quantity}`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+  } else if (entry.itemType === "ارز") {
+    ctx.fillText(`نوع ارز: ${entry.currencyType}`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`تعداد: ${entry.quantity}`, startX, startY);
+    startY += lineHeight;
+    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+  }
+
   startY += lineHeight;
   ctx.fillText(`توضیحات: ${entry.desc}`, startX, startY);
 
@@ -244,50 +308,6 @@ function showSummary(chatId) {
   bot.sendMessage(chatId, msg);
 }
 
-function exportCSV(chatId) {
-  const userFile = `${dataDir}/data_${chatId}.json`;
-  if (!fs.existsSync(userFile))
-    return bot.sendMessage(chatId, "❗ هنوز تراکنشی ثبت نکرده‌اید.");
-
-  const transactions = JSON.parse(fs.readFileSync(userFile));
-  if (!transactions.length)
-    return bot.sendMessage(chatId, "❗ داده‌ای برای خروجی وجود ندارد.");
-
-  const formattedData = transactions.map((t) => ({
-    "نوع تراکنش": t.type === "buy" ? "خرید" : "فروش",
-    "نام خریدار / فروشنده": t.name,
-    "قیمت مثقال (تومان)": t.priceMithqal.toLocaleString("fa-IR"),
-    "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
-    "وزن (گرم)": t.weight.toLocaleString("fa-IR", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    }),
-    توضیحات: t.desc,
-    تاریخ: t.date,
-  }));
-
-  const parser = new Parser({
-    fields: [
-      "نوع تراکنش",
-      "نام خریدار / فروشنده",
-      "قیمت مثقال (تومان)",
-      "مبلغ کل (تومان)",
-      "وزن (گرم)",
-      "توضیحات",
-      "تاریخ",
-    ],
-  });
-
-  const csv = parser.parse(formattedData);
-
-  const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.csv`;
-  fs.writeFileSync(filePath, csv, "utf8");
-
-  bot.sendDocument(chatId, filePath, {
-    caption: "📄 فایل CSV تراکنش‌ها",
-  });
-}
-
 function exportExcel(chatId) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   if (!fs.existsSync(userFile))
@@ -299,34 +319,24 @@ function exportExcel(chatId) {
 
   const formattedData = transactions.map((t) => ({
     "نوع تراکنش": t.type === "buy" ? "خرید" : "فروش",
-    "نام خریدار / فروشنده": t.name,
-    "قیمت مثقال (تومان)": t.priceMithqal.toLocaleString("fa-IR"),
+    "نوع کالا": t.itemType,
+    "جزئیات": t.itemType === "طلا" 
+      ? `نام: ${t.name}`
+      : t.itemType === "سکه"
+      ? `نوع سکه: ${t.coinType}`
+      : `نوع ارز: ${t.currencyType}`,
+    "قیمت پایه / مثقال": (t.priceMithqal || t.basePrice)?.toLocaleString("fa-IR"),
+    "تعداد / مبلغ کل": t.quantity || t.amount,
     "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
-    "وزن (گرم)": t.weight.toLocaleString("fa-IR", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    }),
-    تاریخ: t.date,
-    توضیحات: t.desc,
+    "توضیحات": t.desc,
+    "تاریخ": t.date,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
-
-  worksheet["!cols"] = [
-    { wch: 12 }, // نوع تراکنش
-    { wch: 25 }, // نام خریدار / فروشنده
-    { wch: 20 }, // قیمت مثقال (تومان)
-    { wch: 20 }, // مبلغ کل (تومان)
-    { wch: 15 }, // وزن (گرم)
-    { wch: 25 }, // تاریخ
-    { wch: 30 }, // توضیحات
-  ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "تراکنش‌ها");
 
   const filePath = `${exportDir}/transactions_${chatId}_${Date.now()}.xlsx`;
-
   XLSX.writeFile(workbook, filePath);
-
   bot.sendDocument(chatId, filePath);
 }
