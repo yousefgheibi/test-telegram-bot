@@ -30,7 +30,11 @@ bot.onText(/\/start/, (msg) => {
 function registerUser(chatId, name) {
   const users = JSON.parse(fs.readFileSync(usersFile));
   if (!users.find((u) => u.chatId === chatId)) {
-    users.push({ chatId, name, date: new Date().toLocaleString("fa-IR",{ timeZone: "Asia/Tehran" }) });
+    users.push({
+      chatId,
+      name,
+      date: new Date().toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }),
+    });
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
     bot.sendMessage(
       ADMIN_CHAT_ID,
@@ -97,7 +101,10 @@ function handleInput(chatId, text) {
     // --- مرحله انتخاب نوع کالا ---
     case "itemType":
       if (!["طلا", "سکه", "ارز"].includes(text))
-        return bot.sendMessage(chatId, "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید.");
+        return bot.sendMessage(
+          chatId,
+          "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید."
+        );
 
       state.itemType = text;
       if (text === "طلا") {
@@ -129,13 +136,19 @@ function handleInput(chatId, text) {
     case "coinType":
       state.coinType = text;
       state.step = "basePrice";
-      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:");
+      bot.sendMessage(
+        chatId,
+        "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:"
+      );
       break;
 
     case "currencyType":
       state.currencyType = text;
       state.step = "basePrice";
-      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:");
+      bot.sendMessage(
+        chatId,
+        "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:"
+      );
       break;
 
     case "basePrice":
@@ -196,7 +209,7 @@ function handleInput(chatId, text) {
   }
 }
 
-function saveTransaction(chatId, record) {
+async function saveTransaction(chatId, record) {
   const userFile = `${dataDir}/data_${chatId}.json`;
   let transactions = [];
   if (fs.existsSync(userFile))
@@ -204,7 +217,7 @@ function saveTransaction(chatId, record) {
 
   const entry = {
     ...record,
-    date: new Date().toLocaleString("fa-IR",{ timeZone: "Asia/Tehran" }),
+    date: new Date().toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }),
   };
   transactions.push(entry);
   fs.writeFileSync(userFile, JSON.stringify(transactions, null, 2));
@@ -213,10 +226,22 @@ function saveTransaction(chatId, record) {
   createInvoiceImage(entry, filePath, () => {
     bot.sendPhoto(chatId, filePath, {
       caption: `✅ تراکنش ${entry.type === "buy" ? "خرید" : "فروش"} ثبت شد.`,
-    }).then(()=>{
-      this.sendMainMenu(chatId)
     });
   });
+
+  await bot.sendMessage(
+    chatId,
+    "📋 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
+    {
+      reply_markup: {
+        keyboard: [
+          ["🟢 ثبت خرید", "🔴 ثبت فروش"],
+          ["📈 خلاصه وضعیت", "📤 خروجی فایل"],
+        ],
+        resize_keyboard: true,
+      },
+    }
+  );
 }
 
 function createInvoiceImage(entry, outputPath, callback) {
@@ -225,7 +250,7 @@ function createInvoiceImage(entry, outputPath, callback) {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#fef6e4";
+  ctx.fillStyle = "#fffcf8";
   ctx.fillRect(0, 0, width, height);
 
   ctx.strokeStyle = "#d4af37";
@@ -245,7 +270,11 @@ function createInvoiceImage(entry, outputPath, callback) {
   ctx.font = "20px Vazirmatn";
   ctx.fillText(`تاریخ: ${entry.date}`, startX, startY);
   startY += lineHeight;
-  ctx.fillText(`نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`, startX, startY);
+  ctx.fillText(
+    `نوع تراکنش: ${entry.type === "buy" ? "خرید" : "فروش"}`,
+    startX,
+    startY
+  );
   startY += lineHeight;
   ctx.fillText(`نوع کالا: ${entry.itemType}`, startX, startY);
   startY += lineHeight;
@@ -253,27 +282,63 @@ function createInvoiceImage(entry, outputPath, callback) {
   if (entry.itemType === "طلا") {
     ctx.fillText(`نام: ${entry.name}`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `قیمت مثقال: ${entry.priceMithqal.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`وزن: ${entry.weight.toLocaleString("fa-IR")} گرم`, startX, startY);
+    ctx.fillText(
+      `وزن: ${entry.weight.toLocaleString("fa-IR")} گرم`,
+      startX,
+      startY
+    );
   } else if (entry.itemType === "سکه") {
     ctx.fillText(`نوع سکه: ${entry.coinType}`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`تعداد: ${entry.quantity.toLocaleString("fa-IR")}`, startX, startY);
+    ctx.fillText(
+      `تعداد: ${entry.quantity.toLocaleString("fa-IR")}`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
   } else if (entry.itemType === "ارز") {
     ctx.fillText(`نوع ارز: ${entry.currencyType}`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`تعداد: ${entry.quantity.toLocaleString("fa-IR")}`, startX, startY);
+    ctx.fillText(
+      `تعداد: ${entry.quantity.toLocaleString("fa-IR")}`,
+      startX,
+      startY
+    );
     startY += lineHeight;
-    ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
+    ctx.fillText(
+      `مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`,
+      startX,
+      startY
+    );
   }
 
   startY += lineHeight;
@@ -322,16 +387,19 @@ function exportExcel(chatId) {
   const formattedData = transactions.map((t) => ({
     "نوع تراکنش": t.type === "buy" ? "خرید" : "فروش",
     "نوع کالا": t.itemType,
-    "جزئیات": t.itemType === "طلا" 
-      ? `نام: ${t.name}`
-      : t.itemType === "سکه"
-      ? `نوع سکه: ${t.coinType}`
-      : `نوع ارز: ${t.currencyType}`,
-    "قیمت پایه / مثقال": (t.priceMithqal || t.basePrice)?.toLocaleString("fa-IR"),
+    جزئیات:
+      t.itemType === "طلا"
+        ? `نام: ${t.name}`
+        : t.itemType === "سکه"
+        ? `نوع سکه: ${t.coinType}`
+        : `نوع ارز: ${t.currencyType}`,
+    "قیمت پایه / مثقال": (t.priceMithqal || t.basePrice)?.toLocaleString(
+      "fa-IR"
+    ),
     "تعداد / مبلغ کل": (t.quantity || t.amount$)?.toLocaleString("fa-IR"),
     "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
-    "توضیحات": t.desc,
-    "تاریخ": t.date,
+    توضیحات: t.desc,
+    تاریخ: t.date,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
