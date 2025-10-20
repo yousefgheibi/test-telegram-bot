@@ -105,10 +105,7 @@ function handleInput(chatId, text) {
     // --- انتخاب نوع کالا ---
     case "itemType":
       if (!["طلا", "سکه", "ارز"].includes(text))
-        return bot.sendMessage(
-          chatId,
-          "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید."
-        );
+        return bot.sendMessage(chatId, "❌ لطفاً یکی از گزینه‌ها را انتخاب کنید.");
 
       state.itemType = text;
 
@@ -118,12 +115,24 @@ function handleInput(chatId, text) {
           chatId,
           "💰 لطفاً قیمت روز مثقال طلا (به تومان) را وارد کنید:"
         );
-      } else {
-        state.step = "basePrice";
-        bot.sendMessage(
-          chatId,
-          `💰 لطفاً قیمت پایه ${text} (به تومان) را وارد کنید:`
-        );
+      } else if (text === "سکه") {
+        state.step = "coinType";
+        bot.sendMessage(chatId, "🪙 لطفاً نوع سکه را انتخاب کنید:", {
+          reply_markup: {
+            keyboard: [["ربع", "نیم", "تمام"]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          },
+        });
+      } else if (text === "ارز") {
+        state.step = "currencyType";
+        bot.sendMessage(chatId, "💵 لطفاً نوع ارز را انتخاب کنید:", {
+          reply_markup: {
+            keyboard: [["دلار", "یورو", "لیر"]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          },
+        });
       }
       break;
 
@@ -157,40 +166,22 @@ function handleInput(chatId, text) {
       break;
 
     // --- سکه و ارز ---
-    case "basePrice":
-      if (isNaN(text))
-        return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
-      state.basePrice = Number(text);
-
-      if (state.itemType === "سکه") {
-        state.step = "coinType";
-        bot.sendMessage(chatId, "🪙 لطفاً نوع سکه را انتخاب کنید:", {
-          reply_markup: {
-            keyboard: [["ربع", "نیم", "تمام"]],
-            resize_keyboard: true,
-            one_time_keyboard: true,
-          },
-        });
-      } else if (state.itemType === "ارز") {
-        state.step = "currencyType";
-        bot.sendMessage(chatId, "💵 لطفاً نوع ارز را انتخاب کنید:", {
-          reply_markup: {
-            keyboard: [["دلار", "یورو", "لیر"]],
-            resize_keyboard: true,
-            one_time_keyboard: true,
-          },
-        });
-      }
-      break;
-
     case "coinType":
       state.coinType = text;
-      state.step = "quantity";
-      bot.sendMessage(chatId, "🔢 لطفاً تعداد را وارد کنید:");
+      state.step = "basePrice";
+      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه سکه (به تومان) را وارد کنید:");
       break;
 
     case "currencyType":
       state.currencyType = text;
+      state.step = "basePrice";
+      bot.sendMessage(chatId, "💰 لطفاً قیمت پایه ارز (به تومان) را وارد کنید:");
+      break;
+
+    case "basePrice":
+      if (isNaN(text))
+        return bot.sendMessage(chatId, "❌ لطفاً فقط عدد وارد کنید.");
+      state.basePrice = Number(text);
       state.step = "quantity";
       bot.sendMessage(chatId, "🔢 لطفاً تعداد را وارد کنید:");
       break;
@@ -246,7 +237,7 @@ function saveTransaction(chatId, record) {
 
 function createInvoiceImage(entry, outputPath, callback) {
   const width = 600;
-  const height = 500;
+  const height = 540;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
