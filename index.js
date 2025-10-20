@@ -213,6 +213,8 @@ function saveTransaction(chatId, record) {
   createInvoiceImage(entry, filePath, () => {
     bot.sendPhoto(chatId, filePath, {
       caption: `✅ تراکنش ${entry.type === "buy" ? "خرید" : "فروش"} ثبت شد.`,
+    }).then(()=>{
+      this.sendMainMenu(chatId)
     });
   });
 }
