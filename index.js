@@ -259,7 +259,7 @@ function createInvoiceImage(entry, outputPath, callback) {
 
   ctx.fillStyle = "#d4af37";
   ctx.font = "bold 32px Vazirmatn";
-  ctx.fillText("گالـری یامـــور", 200, 50);
+  ctx.fillText("گالـری یامـــور", 200, 80);
   ctx.textAlign = "right";
 
   const startX = width - 40;
