@@ -30,7 +30,7 @@ bot.onText(/\/start/, (msg) => {
 function registerUser(chatId, name) {
   const users = JSON.parse(fs.readFileSync(usersFile));
   if (!users.find((u) => u.chatId === chatId)) {
-    users.push({ chatId, name, date: new Date().toLocaleString("fa-IR") });
+    users.push({ chatId, name, date: new Date().toLocaleString("fa-IR",{ timeZone: "Asia/Tehran" }) });
     fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
     bot.sendMessage(
       ADMIN_CHAT_ID,
@@ -204,7 +204,7 @@ function saveTransaction(chatId, record) {
 
   const entry = {
     ...record,
-    date: new Date().toLocaleString("fa-IR"),
+    date: new Date().toLocaleString("fa-IR",{ timeZone: "Asia/Tehran" }),
   };
   transactions.push(entry);
   fs.writeFileSync(userFile, JSON.stringify(transactions, null, 2));
@@ -255,13 +255,13 @@ function createInvoiceImage(entry, outputPath, callback) {
     startY += lineHeight;
     ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`وزن: ${entry.weight} گرم`, startX, startY);
+    ctx.fillText(`وزن: ${entry.weight.toLocaleString("fa-IR")} گرم`, startX, startY);
   } else if (entry.itemType === "سکه") {
     ctx.fillText(`نوع سکه: ${entry.coinType}`, startX, startY);
     startY += lineHeight;
     ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`تعداد: ${entry.quantity}`, startX, startY);
+    ctx.fillText(`تعداد: ${entry.quantity.toLocaleString("fa-IR")}`, startX, startY);
     startY += lineHeight;
     ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
   } else if (entry.itemType === "ارز") {
@@ -269,7 +269,7 @@ function createInvoiceImage(entry, outputPath, callback) {
     startY += lineHeight;
     ctx.fillText(`قیمت پایه: ${entry.basePrice.toLocaleString("fa-IR")} تومان`, startX, startY);
     startY += lineHeight;
-    ctx.fillText(`تعداد: ${entry.quantity}`, startX, startY);
+    ctx.fillText(`تعداد: ${entry.quantity.toLocaleString("fa-IR")}`, startX, startY);
     startY += lineHeight;
     ctx.fillText(`مبلغ کل: ${entry.amount.toLocaleString("fa-IR")} تومان`, startX, startY);
   }
@@ -326,7 +326,7 @@ function exportExcel(chatId) {
       ? `نوع سکه: ${t.coinType}`
       : `نوع ارز: ${t.currencyType}`,
     "قیمت پایه / مثقال": (t.priceMithqal || t.basePrice)?.toLocaleString("fa-IR"),
-    "تعداد / مبلغ کل": t.quantity || t.amount,
+    "تعداد / مبلغ کل": (t.quantity || t.amount$)?.toLocaleString("fa-IR"),
     "مبلغ کل (تومان)": t.amount.toLocaleString("fa-IR"),
     "توضیحات": t.desc,
     "تاریخ": t.date,
